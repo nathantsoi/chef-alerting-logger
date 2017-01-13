@@ -1,0 +1,30 @@
+#!/bin/bash
+LOGFILE=$1
+GREPFOR=$2
+FNAME=$(basename $LOGFILE)
+THISDIR=$(readlink -f $(dirname "$0"))
+TMPFILE=/tmp/${FNAME}.gz
+TSTAMP=$(date +%Y-%m-%dT%H-%M-%SZ)
+HOSTNAME=$(hostname)
+TARGETFILE=s3://<%= @bucket %>/${HOSTNAME}/${TSTAMP}.log.gz
+
+if [ -z ${GREPFOR+x} ]; then
+  echo "no grep string specified"
+else
+  GREPOUT=$(grep --ignore-case ${GREPFOR} ${LOGFILE})
+  GREPRES=$?
+  if [[ $GREPRES -eq 0 ]]; then
+    /bin/bash ${THISDIR}/notify.sh "found ${GREPFOR} match in ${LOGFILE} on ${HOSTNAME} (${TARGETFILE}): ${GREPOUT}"
+  else
+    echo "grep for '${GREPFOR}' didn't match anything in ${LOGFILE}"
+  fi
+fi
+
+gzip -c $LOGFILE > $TMPFILE
+
+AWS_ACCESS_KEY_ID=<%= @aws_key_id %> \
+  AWS_SECRET_ACCESS_KEY=<%= @aws_key %> \
+  AWS_DEFAULT_REGION=<%= @aws_region %> \
+  aws s3 cp $TMPFILE $TARGETFILE
+
+rm $TMPFILE
