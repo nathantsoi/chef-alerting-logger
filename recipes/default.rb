@@ -28,6 +28,7 @@ end
 
 directory "#{node['alerting_logger']['default_dir']}/bin" do
   action :create
+  recursive true
 end
 
 template "#{node['alerting_logger']['default_dir']}/bin/notify.sh" do
